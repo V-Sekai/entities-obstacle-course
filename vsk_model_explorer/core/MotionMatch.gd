@@ -23,7 +23,6 @@ signal moves_made(path: String)
 const Motion = preload("res://vsk_model_explorer/core/Motion.gd")
 const MotionMatchNode = preload("res://vsk_model_explorer/core/MotionMatchNode.gd")
 const Bintr = preload("res://vsk_model_explorer/core/Bintr.gd")
-const AutoRig = preload("res://vsk_model_explorer/core/AutoRig.gd")
 const MM_ELF := "res://mm.elf"
 const RIG_ELF := "res://skintokens.elf"
 const DIR := "res://motion/mm"
@@ -111,9 +110,6 @@ var _press_down := false
 var _press_run := false
 var _marker: MeshInstance3D
 var _last_status := ""
-# The auto-rig of the viewer. M on a model with no skin rigs it first, then walks the result.
-var auto_rig: Node
-var _walk_after_rig := false
 var _keys_testing := false
 var _space_jumps := 0
 var _trace := OS.get_environment("MOVE_TRACE") != ""
@@ -288,11 +284,7 @@ func _on_loaded(ok: bool, scene: Node) -> void:
 		printerr("MOVE-FAIL the model did not open")
 		get_tree().quit(1)
 		return
-	if _walk_after_rig and ok:
-		# The auto-rig result just opened: make its moves.
-		_walk_after_rig = false
-		start.call_deferred()
-	elif _start_after_load and ok:
+	if _start_after_load and ok:
 		# The moves file just opened.
 		_start_after_load = false
 		if _test:
@@ -320,17 +312,10 @@ func start() -> void:
 			if _test:
 				get_tree().quit(1)
 			return
-		if not AutoRig.has_skin(source):
-			await _rig_first()
-			return
-		# The rig program reads VRM 1.0 Humanoid roles only (VRMC_vrm, or KHR_character_skeleton_mapping's
-		# vrm1_humanoid set). A VRM 0.x is saved as VRM 1.0 first; the walk uses that file.
-		if (
-			source.get_extension().to_lower() == "vrm"
-			and auto_rig != null
-			and not auto_rig.is_vrm1(source)
-		):
-			_vrm1_first()
+		if not _has_skin(source):
+			_fail("the model has no rig; rig it first, then press M.")
+			if _test:
+				get_tree().quit(1)
 			return
 		busy = true
 		var out := await _make_moves()
@@ -347,56 +332,17 @@ func start() -> void:
 	_begin()
 
 
-# Save the open VRM 0.x as VRM 1.0 (godot-vrm turns it to face +Z) in the user folder, open that
-# file, and start() runs again on it. The moves file is then named after <name>.vrm1.
-func _vrm1_first() -> void:
-	say("Move: the model is VRM 0.x, so it is saved as VRM 1.0 first.")
-	var out := OS.get_user_data_dir().path_join(source.get_file().get_basename() + ".vrm1.vrm")
-	# GLTFDocument writes binary glTF for a .glb name only: write that, then name it .vrm.
-	var glb := out.get_basename() + ".glb"
-	var why: String = auto_rig.save_vrm1(source, glb)
-	if why == "" and DirAccess.rename_absolute(glb, out) != OK:
-		why = "cannot rename %s" % glb
-	if why != "":
-		_fail("cannot save the model as VRM 1.0: %s" % why)
-		if _test:
-			get_tree().quit(1)
-		return
-	print("MOVE-VRM1 %s" % out)
-	_walk_after_rig = true
-	moves_made.emit(out)
-
-
-# The open model has no skin, so skintokens.elf cannot put the clips on it. On the desktop with
-# the rig weights, auto-rig it; the rigged file opens and start() runs again on it.
-func _rig_first() -> void:
-	if OS.has_feature("web") or auto_rig == null or not auto_rig.available():
-		var how := (
-			"rig it with the Auto-rig button on the page"
-			if OS.has_feature("web")
-			else "the SkinTokens viewer rigs it with R"
-		)
-		_fail("the model has no rig: %s, then press M." % how)
-		if _test:
-			get_tree().quit(1)
-		return
-	say("Move: the model has no rig, so it is auto-rigged first.")
-	_walk_after_rig = true
-	busy = true
-	# The rigged file opens on a worker thread, after start() returns: watch the signal instead.
-	var got := [false]
-	var mark := func(_path: String) -> void: got[0] = true
-	auto_rig.rigged.connect(mark, CONNECT_ONE_SHOT)
-	await auto_rig.start()
-	if auto_rig.rigged.is_connected(mark):
-		auto_rig.rigged.disconnect(mark)
-	busy = false
-	if not got[0]:
-		# The auto-rig made no rigged file; its own message stays on screen.
-		_walk_after_rig = false
-		if _test:
-			printerr("MOVE-FAIL the auto-rig gave no rigged file: ", _last_status)
-			get_tree().quit(1)
+# True when the glTF/GLB/VRM at path has at least one skin: skintokens.elf cannot put clips on a rigid model.
+static func _has_skin(path: String) -> bool:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null or f.get_length() < 20 or f.get_32() != 0x46546C67:
+		return false
+	f.seek(12)
+	var size := f.get_32()
+	if f.get_32() != 0x4E4F534A or size > f.get_length():
+		return false
+	var root = JSON.parse_string(f.get_buffer(size).get_string_from_utf8())
+	return root is Dictionary and not root.get("skins", []).is_empty()
 
 
 func stop() -> void:
