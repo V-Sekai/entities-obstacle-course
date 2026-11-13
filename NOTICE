@@ -1,0 +1,6 @@
+Built with Meta Llama 3.
+
+The `motion/*.f32` files are text-prompt embeddings for Kimodo (4096 floats each). They are the output of
+an LLM2Vec encoder based on Meta Llama 3 (chibifire/Llama-3-Kimodo-GGML). The encoder and the Llama 3 model
+are not in this repository. The Meta Llama 3 Community License is in `LICENSES/llama3.LICENSE`.
+Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright (c) Meta Platforms, Inc. All Rights Reserved.
