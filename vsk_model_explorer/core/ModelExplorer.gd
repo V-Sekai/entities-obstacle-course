@@ -10,6 +10,7 @@ var worker: Worker
 
 const CardStyle = preload("res://vsk_model_explorer/core/CardStyle.gd")
 const WalkBar = preload("res://vsk_model_explorer/core/WalkBar.gd")
+const DEFAULT_AVATAR := "res://avatar/maro/Maro.moves.glb"
 const McpSwitch = preload("res://vsk_model_explorer/core/McpSwitch.gd")
 const BuildConsts = preload("res://addons/vsk_version/build_constants.gd")
 const gltf_vrm_extension_const = preload("res://addons/vrm/vrm_extension.gd")
@@ -135,6 +136,12 @@ func _check_command_line_args():
 			if FileAccess.file_exists(clean_arg):
 				args.append(clean_arg)
 				break
+
+	# The obstacle course app: with no model given, open the baked default avatar (clips already on her) and walk.
+	if not ObstacleCourse.names_a_model(args) and move != null and FileAccess.file_exists(DEFAULT_AVATAR):
+		move._start_after_load = true
+		_load_file(DEFAULT_AVATAR)
+		return
 
 	# Process the first valid file argument
 	for arg in args:

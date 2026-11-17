@@ -50,7 +50,17 @@ var _band := -1  # the mode the guest's player body was built for
 
 
 func _ready() -> void:
-	visible = "--obstacle-course" in OS.get_cmdline_user_args()
+	# On for --obstacle-course, and for a plain launch: flags such as --mcp-port=N do not name a model
+	var args := OS.get_cmdline_user_args()
+	visible = "--obstacle-course" in args or not names_a_model(args)
+
+
+# True when the launch names a model: any argument that is not a --flag.
+static func names_a_model(args: PackedStringArray) -> bool:
+	for a in args:
+		if not a.begins_with("--"):
+			return true
+	return false
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
