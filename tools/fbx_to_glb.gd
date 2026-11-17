@@ -19,7 +19,19 @@ func _init() -> void:
 	var state := GLTFState.new()
 	var err := doc.append_from_scene(root, state)
 	if err == OK:
-		err = doc.write_to_filesystem(state, ProjectSettings.globalize_path("res://").path_join(args[1]))
+		err = doc.write_to_filesystem(
+			state, ProjectSettings.globalize_path("res://").path_join(args[1])
+		)
 	var skeletons := root.find_children("*", "Skeleton3D", true, false)
-	print("FBX-GLB err=%d skeletons=%d bones=%d out=%s" % [err, skeletons.size(), (skeletons[0] as Skeleton3D).get_bone_count() if skeletons.size() > 0 else 0, args[1]])
+	print(
+		(
+			"FBX-GLB err=%d skeletons=%d bones=%d out=%s"
+			% [
+				err,
+				skeletons.size(),
+				(skeletons[0] as Skeleton3D).get_bone_count() if skeletons.size() > 0 else 0,
+				args[1]
+			]
+		)
+	)
 	quit(0 if err == OK else 1)
