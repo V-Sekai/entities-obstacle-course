@@ -984,7 +984,9 @@ func _clear_angle(chain: Array, mesh: Dictionary) -> float:
 			var begin := s.lerp(tip, start)
 			var clear := INF
 			for q in body:
-				clear = min(clear, Geometry3D.get_closest_point_to_segment(q, begin, tip).distance_to(q))
+				clear = min(
+					clear, Geometry3D.get_closest_point_to_segment(q, begin, tip).distance_to(q)
+				)
 			# Half an arm more than touching: the forearm swings in while walking. Measured on
 			# SK_CharacterMedium: arm vertices inside the body fell from 26-38% to 1.5-2.4% (idle, walk,
 			# run, turn); touching (1.0) left 5-15%.

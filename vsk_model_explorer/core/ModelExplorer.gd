@@ -138,7 +138,11 @@ func _check_command_line_args():
 				break
 
 	# The obstacle course app: with no model given, open the baked default avatar (clips already on her) and walk.
-	if not ObstacleCourse.names_a_model(args) and move != null and FileAccess.file_exists(DEFAULT_AVATAR):
+	if (
+		not ObstacleCourse.names_a_model(args)
+		and move != null
+		and FileAccess.file_exists(DEFAULT_AVATAR)
+	):
 		move._start_after_load = true
 		_load_file(DEFAULT_AVATAR)
 		return
