@@ -4,3 +4,9 @@ The `motion/*.f32` files are text-prompt embeddings for Kimodo (4096 floats each
 an LLM2Vec encoder based on Meta Llama 3 (chibifire/Llama-3-Kimodo-GGML). The encoder and the Llama 3 model
 are not in this repository. The Meta Llama 3 Community License is in `LICENSES/llama3.LICENSE`.
 Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright (c) Meta Platforms, Inc. All Rights Reserved.
+
+The default avatar, `avatar/maro/MarocchinoLP.fbx` and its texture, is "Marocchino" (Maro), a free original 3D model by
+Mohka Noir (https://twitter.com/MohkaNoir, https://cafemohka.booth.pm/), under the Apache-2.0 licence. The source is
+https://github.com/chibifire-stages/character-marocchino at commit dcd38ff7f6f2ea10a584dca383a6b7c3fab27d36. The licence
+file, the author's licence summary and full licence text are in `avatar/maro/` unchanged. The author prohibits using
+the model for slanderous purposes or in offensive contexts, for example hate speech.
