@@ -20,8 +20,13 @@ cp "$eng/godot.macos.template_release.double.arm64" "$app/Contents/MacOS/Obstacl
 cp "$eng/libfdb_c.dylib" "$app/Contents/Frameworks/"
 # codesign takes every file in MacOS/ for code, so the pack sits in Resources/
 cp "$out/ObstacleCourse.pck" "$app/Contents/Resources/"
-cp "$here/LICENSE" "$here/NOTICE" "$here/README.md" "$app/Contents/Resources/"
+cp "$here/LICENSE" "$here/NOTICE" "$here/THIRD-PARTY.md" "$here/README.md" "$app/Contents/Resources/"
 cp -R "$here/LICENSES" "$app/Contents/Resources/LICENSES"
+cp -R "$here/tools/licences/src" "$app/Contents/Resources/LICENSES/texts"
+# the build fails here, not later, if a text THIRD-PARTY.md names is not in the app
+for f in THIRD-PARTY.md LICENSES/third-party/foundationdb-LICENSE LICENSES/third-party/mujoco-LICENSE LICENSES/texts/Godot_Engine.md; do
+  test -s "$app/Contents/Resources/$f" || { echo "missing in the app: $f" >&2; exit 1; }
+done
 mkdir -p "$app/Contents/Resources/avatar-maro"
 cp "$here/avatar/maro/LICENSE" "$here/avatar/maro/CITATION.cff" "$app/Contents/Resources/avatar-maro/"
 cp -R "$here/avatar/maro/readme" "$app/Contents/Resources/avatar-maro/readme"
