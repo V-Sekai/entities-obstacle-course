@@ -816,18 +816,64 @@ func _space_arms() -> void:
 	print("MOVE-ARMS ", "; ".join(report))
 
 
-# [shoulder, upper arm, forearm, hand, ... tip] for each arm: the chains from the bone with the
-# most children above the hips (the chest) that end farthest to the side.
+# [shoulder, upper arm, forearm, hand, ... tip] for each arm: the chains from the chest that end
+# farthest to the side. The chest is first guessed as the highest bone with three or more children.
+# A head with hair and eyes on it, or a hand with fingers, can sit higher than the chest and find no
+# arms; then the chest is the bone both hands hang from.
 func _arm_chains() -> Array:
-	var n := _skeleton.get_bone_count()
+	var guess := _chest_by_children()
+	var out := _chains_from(guess) if guess >= 0 else []
+	if out.size() < 2:
+		var reach := _chest_by_reach()
+		if reach >= 0 and reach != guess:
+			out = _chains_from(reach)
+	return out
+
+
+func _chest_by_children() -> int:
 	var hips := _skeleton.find_bone(_hips_path.get_slice(":", 1))
 	var chest := -1
-	for b in n:
+	for b in _skeleton.get_bone_count():
 		if _skeleton.get_bone_children(b).size() >= 3 and b != hips:
 			if chest < 0 or _rest(b).origin.y > _rest(chest).origin.y:
 				chest = b
-	if chest < 0:
-		return []
+	return chest
+
+
+# The lowest bone both hands hang from: the common ancestor of the bones farthest out to the left and
+# to the right of the hips (across the body: up x forward). -1 when that is not above the hips.
+func _chest_by_reach() -> int:
+	var hips := _skeleton.find_bone(_hips_path.get_slice(":", 1))
+	var across := Vector3.UP.cross(_to_scene(_skeleton).basis * Vector3.BACK).normalized()
+	var origin := _rest(hips).origin
+	var left := -1
+	var right := -1
+	var far_left := 0.0
+	var far_right := 0.0
+	for b in _skeleton.get_bone_count():
+		var d := (_rest(b).origin - origin).dot(across)
+		if d > far_left:
+			far_left = d
+			left = b
+		if d < far_right:
+			far_right = d
+			right = b
+	if left < 0 or right < 0:
+		return -1
+	var above := {}
+	var node := left
+	while node >= 0:
+		above[node] = true
+		node = _skeleton.get_bone_parent(node)
+	node = right
+	while node >= 0 and not above.has(node):
+		node = _skeleton.get_bone_parent(node)
+	if node < 0 or _rest(node).origin.y <= origin.y:
+		return -1
+	return node
+
+
+func _chains_from(chest: int) -> Array:
 	var out := []
 	for c in _skeleton.get_bone_children(chest):
 		var chain := [c]
@@ -929,16 +975,23 @@ func _clear_angle(chain: Array, mesh: Dictionary) -> float:
 			few.append(body[int(i * step)])
 		body = few
 	var ax := _axis(chain)
-	for deg in range(0, 61):
-		var tip := s + Vector3.DOWN.rotated(ax, deg_to_rad(deg)) * length
-		var clear := INF
-		for q in body:
-			clear = min(clear, Geometry3D.get_closest_point_to_segment(q, s, tip).distance_to(q))
-		# Half an arm more than touching: the forearm swings in while walking. Measured on
-		# SK_CharacterMedium: arm vertices inside the body fell from 26-38% to 1.5-2.4% (idle, walk,
-		# run, turn); touching (1.0) left 5-15%.
-		if clear >= 1.5 * r:
-			return deg_to_rad(deg)
+	# The whole arm first. A shoulder joint set inside the body (narrow-set joints in a wide torso)
+	# keeps the upper arm in the body at every angle; then only the lower half, the forearm and
+	# hand, has to clear.
+	for start in [0.0, 0.5]:
+		for deg in range(0, 61):
+			var tip := s + Vector3.DOWN.rotated(ax, deg_to_rad(deg)) * length
+			var begin := s.lerp(tip, start)
+			var clear := INF
+			for q in body:
+				clear = min(
+					clear, Geometry3D.get_closest_point_to_segment(q, begin, tip).distance_to(q)
+				)
+			# Half an arm more than touching: the forearm swings in while walking. Measured on
+			# SK_CharacterMedium: arm vertices inside the body fell from 26-38% to 1.5-2.4% (idle, walk,
+			# run, turn); touching (1.0) left 5-15%.
+			if clear >= 1.5 * r:
+				return deg_to_rad(deg)
 	return deg_to_rad(60.0)
 
 
